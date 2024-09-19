@@ -1,22 +1,43 @@
 name: Stop VM
 
 on:
-  workflow_dispatch:
   schedule:
-    - cron: '0 18 * * *'
+    # 30 minutes before the shut down
+    - cron: '30 17 * * *'
+  workflow_dispatch:
 
 jobs:
   stop-vm:
     runs-on: ubuntu-latest
+    if: vars.RUN_STOP == 'true'
     steps:
-      - name: Azure Login
-        uses: Azure/login@v2
+      - name: Send mail
+        uses: dawidd6/action-send-mail@v3
+        if: vars.NOTIFY_STOP == 'true'
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          from: ${{ secrets.MAIL_FROM }}
+          to: ${{ secrets.MAIL_TO }}
+          subject: ${{ vars.MAIL_SUBJECT }}
+          body: ${{ vars.MAIL_BODY }}
+          html_body: ${{ vars.MAIL_BODY }}
+          convert_markdown: true
+          priority: high
+      - name: Sleep for 30m
+        uses: juliangruber/sleep-action@v2
+        with:
+          time: 30m
+      - name: Login to Azure
+        uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
-      - name: Azure CLI Script
-        uses: azure/CLI@v2
+      - name: Stop virtual machine
+        uses: azure/cli@v2
         with:
           azcliversion: 2.30.0
           inlineScript: |
-            az vm stop --resource-group ${{ secrets.VM_RESOURCE_GROUP }} --name ${{ secrets.VM_NAME }}
-            az vm deallocate --resource-group ${{ secrets.VM_RESOURCE_GROUP }} --name ${{ secrets.VM_NAME }}
+            az vm stop --resource-group ${{ vars.AZURE_RESOURCE_GROUP }} --name ${{ vars.AZURE_VM }}
+            az vm deallocate --resource-group ${{ vars.AZURE_RESOURCE_GROUP }} --name ${{ vars.AZURE_VM }}
