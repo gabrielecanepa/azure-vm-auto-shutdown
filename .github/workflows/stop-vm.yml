@@ -2,8 +2,9 @@ name: Stop VM
 
 on:
   schedule:
-    # 30 minutes before the shut down
-    - cron: '30 17 * * *'
+    - cron: '0 0 * * *'
+  repository_dispatch:
+    types: [stop]
   workflow_dispatch:
 
 jobs:
@@ -11,6 +12,10 @@ jobs:
     runs-on: ubuntu-latest
     if: vars.RUN_STOP == 'true'
     steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
       - name: Send mail
         uses: dawidd6/action-send-mail@v3
         if: vars.NOTIFY_STOP == 'true'
@@ -34,6 +39,11 @@ jobs:
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - uses: actions/checkout@v4
+      - run: |
+          gh variable list
+          gh variable set TEST_VAR --body "Set from workflow"
+          gh variable list
       - name: Stop virtual machine
         uses: azure/cli@v2
         with:
@@ -41,3 +51,7 @@ jobs:
           inlineScript: |
             az vm stop --resource-group ${{ vars.AZURE_RESOURCE_GROUP }} --name ${{ vars.AZURE_VM }}
             az vm deallocate --resource-group ${{ vars.AZURE_RESOURCE_GROUP }} --name ${{ vars.AZURE_VM }}
+      - run: |
+          gh variable list
+          gh variable set TEST_VAR --body "Set from workflow"
+          gh variable list

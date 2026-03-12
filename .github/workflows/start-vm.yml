@@ -1,11 +1,18 @@
 name: Start VM
 
-on: workflow_dispatch
+on:
+  repository_dispatch:
+    types: [start]
+  workflow_dispatch:
 
 jobs:
   start-vm:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
       - name: Azure Login
         uses: Azure/login@v2
         with:
@@ -15,4 +22,4 @@ jobs:
         with:
           azcliversion: 2.30.0
           inlineScript: |
-            az vm start --resource-group ${{ secrets.VM_RESOURCE_GROUP }} --name ${{ secrets.VM_NAME }}
+            az vm start --resource-group ${{ vars.AZURE_RESOURCE_GROUP }} --name ${{ vars.AZURE_VM }}
